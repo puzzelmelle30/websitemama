@@ -94,6 +94,11 @@ const app = {
         setTimeout(() => this.initSlideshow(), 100);
       }
       
+      // Initialize lightbox if on gallery pages
+      if (['monumentaal', 'inopdracht', 'kleinwerk'].includes(pageName)) {
+        setTimeout(() => this.initLightbox(), 100);
+      }
+      
     } catch (error) {
       console.error('Error loading page:', error);
       contentDiv.innerHTML = '<div class="prose"><p>Sorry, de pagina kon niet worden geladen.</p></div>';
@@ -140,6 +145,9 @@ const app = {
         e.preventDefault();
         const page = link.getAttribute('data-page') || 'home';
         window.location.hash = page;
+        
+        // Close mobile menu if open
+        this.closeMobileMenu();
       });
     });
     
@@ -164,6 +172,56 @@ const app = {
     if (yearElement) {
       yearElement.textContent = new Date().getFullYear();
     }
+    
+    // Initialize mobile menu
+    this.initMobileMenu();
+  },
+  
+  // Mobile menu functionality
+  initMobileMenu: function() {
+    const toggle = document.querySelector('.mobile-menu-toggle');
+    const nav = document.querySelector('.main-nav ul');
+    
+    if (!toggle) return;
+    
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'mobile-menu-overlay';
+    document.body.appendChild(overlay);
+    
+    // Toggle menu
+    toggle.addEventListener('click', () => {
+      const isActive = nav.classList.contains('active');
+      
+      if (isActive) {
+        this.closeMobileMenu();
+      } else {
+        nav.classList.add('active');
+        toggle.classList.add('active');
+        overlay.classList.add('active');
+        toggle.setAttribute('aria-expanded', 'true');
+        document.body.style.overflow = 'hidden';
+      }
+    });
+    
+    // Close menu when clicking overlay
+    overlay.addEventListener('click', () => {
+      this.closeMobileMenu();
+    });
+  },
+  
+  closeMobileMenu: function() {
+    const toggle = document.querySelector('.mobile-menu-toggle');
+    const nav = document.querySelector('.main-nav ul');
+    const overlay = document.querySelector('.mobile-menu-overlay');
+    
+    if (nav) nav.classList.remove('active');
+    if (toggle) {
+      toggle.classList.remove('active');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+    if (overlay) overlay.classList.remove('active');
+    document.body.style.overflow = '';
   },
   
   // Initialize slideshow when home page is loaded
@@ -185,6 +243,90 @@ const app = {
     
     // Change slide every 5 seconds
     setInterval(nextSlide, 5000);
+  },
+  
+  // Lightbox functionality
+  initLightbox: function() {
+    const lightbox = document.getElementById('lightbox');
+    const galleryItems = document.querySelectorAll('.gallery-item[data-lightbox]');
+    
+    if (!lightbox || galleryItems.length === 0) return;
+    
+    const lightboxImg = lightbox.querySelector('img');
+    const lightboxCaption = lightbox.querySelector('.lightbox-caption');
+    const closeBtn = lightbox.querySelector('.lightbox-close');
+    const prevBtn = lightbox.querySelector('.lightbox-prev');
+    const nextBtn = lightbox.querySelector('.lightbox-next');
+    
+    let currentIndex = 0;
+    const items = Array.from(galleryItems);
+    
+    const showImage = (index) => {
+      const item = items[index];
+      const img = item.querySelector('img');
+      const caption = item.getAttribute('data-caption');
+      
+      lightboxImg.src = img.src;
+      lightboxImg.alt = img.alt;
+      lightboxCaption.textContent = caption;
+      currentIndex = index;
+    };
+    
+    const openLightbox = (index) => {
+      showImage(index);
+      lightbox.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    };
+    
+    const closeLightbox = () => {
+      lightbox.classList.remove('active');
+      document.body.style.overflow = '';
+    };
+    
+    const nextImage = () => {
+      currentIndex = (currentIndex + 1) % items.length;
+      showImage(currentIndex);
+    };
+    
+    const prevImage = () => {
+      currentIndex = (currentIndex - 1 + items.length) % items.length;
+      showImage(currentIndex);
+    };
+    
+    // Attach click handlers to gallery items
+    galleryItems.forEach((item, index) => {
+      item.addEventListener('click', () => openLightbox(index));
+    });
+    
+    // Close button
+    closeBtn.addEventListener('click', closeLightbox);
+    
+    // Navigation buttons
+    nextBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      nextImage();
+    });
+    
+    prevBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      prevImage();
+    });
+    
+    // Click outside to close
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox) {
+        closeLightbox();
+      }
+    });
+    
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (!lightbox.classList.contains('active')) return;
+      
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowRight') nextImage();
+      if (e.key === 'ArrowLeft') prevImage();
+    });
   }
 };
 
